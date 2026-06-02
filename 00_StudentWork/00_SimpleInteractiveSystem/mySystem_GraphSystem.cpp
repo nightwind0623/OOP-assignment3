@@ -1,7 +1,7 @@
 //********************************************
-// Student Name			:
-// Student ID			:
-// Student Email Address:
+// Student Name			: ¨x–wº·
+// Student ID			: 114550048
+// Student Email Address: kevin.hongdragon@gmail.com
 //********************************************
 //
 //
@@ -147,15 +147,11 @@ void GRAPH_SYSTEM::createDefaultGraph( )
     float offset_z = 15.;
 
     int n_0 = addNode(offset_x + 0.0, 0.0, offset_z + 0.0 );
-    cout << "n_0:"<< n_0 << endl;
+    int n_1 = addNode(offset_x + 5.0, 0.0, offset_z + 0.0 );
+    int n_2 = addNode(offset_x + 5.0, 0.0, offset_z + 5.0 );
 
-    //
-    // modify and add your code heres
-    //
-
-    //addEdge( n_0, n_1 );
-    //addEdge( n_1, n_2 );
-
+    addEdge( n_0, n_1 );
+    addEdge( n_1, n_2 );
 }
 
 void GRAPH_SYSTEM::createRandomGraph_DoubleCircles(int n)
@@ -169,9 +165,50 @@ void GRAPH_SYSTEM::createRandomGraph_DoubleCircles(int n)
     float d = 10; // layer distance
     float offset_x = 90.;
     float offset_z = 15.;
-    //
-    // modify and add your code heres
-    //
+    
+    if (n < 3) n = 3;
+    vector<int> inner_ids(n);
+    vector<int> outer_ids(n);
+    float R_in = r;
+    float R_out = r + d;
+
+    for (int i = 0; i < n; ++i) {
+        float theta = 2.0f * 3.14159265f * i / n;
+        float x = offset_x + R_in * cos(theta);
+        float z = offset_z + R_in * sin(theta);
+        inner_ids[i] = addNode(x, 0.0, z);
+    }
+    for (int i = 0; i < n; ++i) {
+        float theta = 2.0f * 3.14159265f * i / n;
+        float x = offset_x + R_out * cos(theta);
+        float z = offset_z + R_out * sin(theta);
+        outer_ids[i] = addNode(x, 0.0, z);
+    }
+
+    for (int i = 0; i < n; ++i) {
+        addEdge(inner_ids[i], inner_ids[(i + 1) % n]);
+    }
+
+    for (int i = 0; i < n; ++i) {
+        addEdge(outer_ids[i], outer_ids[(i + 1) % n]);
+    }
+
+    float cos_limit = R_in / R_out;
+    srand(time(nullptr));
+    for (int i = 0; i < n; ++i) {
+        float theta_i = 2.0f * 3.14159265f * i / n;
+        vector<int> candidates;
+        for (int j = 0; j < n; ++j) {
+            float phi_j = 2.0f * 3.14159265f * j / n;
+            if (cos(theta_i - phi_j) >= cos_limit - 1e-4) {
+                candidates.push_back(outer_ids[j]);
+            }
+        }
+        if (!candidates.empty()) {
+            int rand_idx = rand() % candidates.size();
+            addEdge(inner_ids[i], candidates[rand_idx]);
+        }
+    }
 }
 
 void GRAPH_SYSTEM::createNet_Circular( int n, int num_layers )
@@ -185,9 +222,33 @@ void GRAPH_SYSTEM::createNet_Circular( int n, int num_layers )
     float offset_x = 90.;
     float offset_z = 30.;
 
-    //
-    // modify and add your code heres
-    //
+    if (num_layers < 1) num_layers = 1;
+    if (n < 3) n = 3;
+
+    vector<vector<int>> node_ids(num_layers + 1, vector<int>(n));
+
+    for (int L = 0; L <= num_layers; ++L) {
+        float R_L = r + L * d;
+        for (int i = 0; i < n; ++i) {
+            float theta = 2.0f * 3.14159265f * i / n;
+            float x = offset_x + R_L * cos(theta);
+            float z = offset_z + R_L * sin(theta);
+            node_ids[L][i] = addNode(x, 0.0, z);
+        }
+    }
+
+    for (int L = 0; L <= num_layers; ++L) {
+        for (int i = 0; i < n; ++i) {
+            // ?åÂ±§??? (?ÄÂ§ñÂ±§ L == num_layers ‰∏çÈÄ?
+            if (L < num_layers) {
+                addEdge(node_ids[L][i], node_ids[L][(i + 1) % n]);
+            }
+            // Ë∑®Â±§??? (L < num_layers)
+            if (L < num_layers) {
+                addEdge(node_ids[L][i], node_ids[L + 1][i]);
+            }
+        }
+    }
 }
 void GRAPH_SYSTEM::createNet_Square( int n, int num_layers )
 {
@@ -199,10 +260,37 @@ void GRAPH_SYSTEM::createNet_Square( int n, int num_layers )
     float d = 5; // layer distance 
     float offset_x = 5.;
     float offset_z = 5.;
-    //
-    // modify and add your code heres
-    //
 
+    if (num_layers < 1) num_layers = 1;
+    if (n < 3) n = 3;
+
+    int M = n + 2 * num_layers - 2;
+    vector<vector<int>> grid_node_id(M, vector<int>(M, -1));
+
+    for (int i = 0; i < M; ++i) {
+        for (int j = 0; j < M; ++j) {
+            bool is_hole = (i >= num_layers && i <= M - 1 - num_layers && 
+                            j >= num_layers && j <= M - 1 - num_layers);
+            if (!is_hole) {
+                float x = offset_x + i * d;
+                float z = offset_z + j * d;
+                grid_node_id[i][j] = addNode(x, 0.0, z);
+            }
+        }
+    }
+
+    for (int i = 0; i < M; ++i) {
+        for (int j = 0; j < M; ++j) {
+            if (grid_node_id[i][j] != -1) {
+                if (i + 1 < M && grid_node_id[i + 1][j] != -1) {
+                    addEdge(grid_node_id[i][j], grid_node_id[i + 1][j]);
+                }
+                if (j + 1 < M && grid_node_id[i][j + 1] != -1) {
+                    addEdge(grid_node_id[i][j], grid_node_id[i][j + 1]);
+                }
+            }
+        }
+    }
 }
 void GRAPH_SYSTEM::createNet_RadicalCircular( int n ) {
 
@@ -213,11 +301,23 @@ void GRAPH_SYSTEM::createNet_RadicalCircular( int n ) {
 
     float r = 15; // radius
 
-    //
-    // modify and add your code heres
-    //
+    if (n < 2) n = 2;
+    vector<int> node_ids(n);
 
+    node_ids[0] = addNode(offset_x, 0.0, offset_z);
+    
+    for (int i = 1; i < n; ++i) {
+        float theta = 2.0f * 3.14159265f * (i - 1) / (n - 1);
+        float x = offset_x + r * cos(theta);
+        float z = offset_z + r * sin(theta);
+        node_ids[i] = addNode(x, 0.0, z);
+    }
 
+    for (int i = 1; i < n; ++i) {
+        addEdge(node_ids[0], node_ids[i]);
+        int next_idx = (i == n - 1) ? 1 : i + 1;
+        addEdge(node_ids[i], node_ids[next_idx]);
+    }
 }
 
 //
@@ -226,12 +326,17 @@ void GRAPH_SYSTEM::createNet_RadicalCircular( int n ) {
 //
 int GRAPH_SYSTEM::addNode( float x, float y, float z, float r )
 {
-    //GRAPH_NODE *g;
-    //g = getFreeNode( );
-    //
-    // modify and add your code heres
-    //
-    return -1;
+    GRAPH_NODE *g;
+    g = getFreeNode( );
+    if ( g == nullptr ) return -1;
+    g->p = vector3( x, y, z );
+    g->r = r;
+    g->visited = false;
+    g->depth = 0;
+    g->path_cost = 0.0;
+    g->path_parent = nullptr;
+    g->edgeID.clear( );
+    return g->id;
 }
 
 //
@@ -240,13 +345,24 @@ int GRAPH_SYSTEM::addNode( float x, float y, float z, float r )
 //
 int GRAPH_SYSTEM::addEdge( int nodeID_0, int nodeID_1 )
 {
-    //GRAPH_EDGE *e;
-    //e = getFreeEdge( );
-    //
-    // modify and add your code heres
-    //
+    for (int i = 0; i < mCurNumOfActiveEdges; ++i) {
+        int edgeID = mActiveEdgeArr[i];
+        GRAPH_EDGE *existing_edge = &mEdgeArr_Pool[edgeID];
+        if ((existing_edge->nodeID[0] == nodeID_0 && existing_edge->nodeID[1] == nodeID_1) ||
+            (existing_edge->nodeID[0] == nodeID_1 && existing_edge->nodeID[1] == nodeID_0)) {
+            return existing_edge->id;
+        }
+    }
 
-    return -1;
+    GRAPH_EDGE *e;
+    e = getFreeEdge( );
+    if ( e == nullptr ) return -1;
+    e->nodeID[ 0 ] = nodeID_0;
+    e->nodeID[ 1 ] = nodeID_1;
+    mNodeArr_Pool[ nodeID_0 ].edgeID.push_back( e->id );
+    mNodeArr_Pool[ nodeID_1 ].edgeID.push_back( e->id );
+
+    return e->id;
 }
 
 void GRAPH_SYSTEM::askForInput( )
@@ -268,17 +384,29 @@ void GRAPH_SYSTEM::askForInput( )
     cout << "Click the left button to select/unselect or create an edge" << endl;
     cout << " " << endl;
     cout << "A selected node is highlighted as red." << endl;
-
 }
 
 
 GRAPH_NODE *GRAPH_SYSTEM::findNearestNode( double x, double z, double &cur_distance2 ) const
 {
     GRAPH_NODE *n = nullptr;
-    //cur_distance2 = -1.0;
-    //
-    // modify and add your code heres
-    //
+    cur_distance2 = -1.0;
+    
+    if (mCurNumOfActiveNodes <= 0) return nullptr;
+
+    double min_dist2 = SYS_CONSTANTS::max_double;
+    for (int i = 0; i < mCurNumOfActiveNodes; ++i) {
+        int nodeID = mActiveNodeArr[i];
+        GRAPH_NODE *node = &mNodeArr_Pool[nodeID];
+        double dx = node->p.x - x;
+        double dz = node->p.z - z;
+        double dist2 = dx * dx + dz * dz;
+        if (dist2 < min_dist2) {
+            min_dist2 = dist2;
+            n = node;
+        }
+    }
+    cur_distance2 = min_dist2;
     return n;
 }
 
@@ -344,46 +472,67 @@ void GRAPH_SYSTEM::performOperation(GRAPH_NODE* node) {
 
 void GRAPH_SYSTEM::deleteEdge( int edgeID )
 {
-    //GRAPH_EDGE *e = &mEdgeArr_Pool[ edgeID ];
-    //int dynamicID = e->dynamicID;
+    if (mCurNumOfActiveEdges <= 0) return;
+    GRAPH_EDGE *e = &mEdgeArr_Pool[ edgeID ];
+    int dynamicID = e->dynamicID;
+    if (dynamicID < 0 || dynamicID >= mCurNumOfActiveEdges) return;
 
-    //
-    // modify and add your code heres
-    //
+    removeEdgeFromNode( e, e->nodeID[0] );
+    removeEdgeFromNode( e, e->nodeID[1] );
 
+    int lastEdgeID = mActiveEdgeArr[ mCurNumOfActiveEdges - 1 ];
+    mActiveEdgeArr[ dynamicID ] = lastEdgeID;
+    mEdgeArr_Pool[ lastEdgeID ].dynamicID = dynamicID;
+    --mCurNumOfActiveEdges;
+
+    mFreeEdgeArr[ mCurNumOfFreeEdges ] = edgeID;
+    ++mCurNumOfFreeEdges;
 }
 
 void GRAPH_SYSTEM::removeEdgeFromNode( const GRAPH_EDGE *e, int nodeID )
 {
-    //GRAPH_NODE *n = &mNodeArr_Pool[ nodeID ];
-    //
-    // modify and add your code heres
-    //
-
+    GRAPH_NODE *n = &mNodeArr_Pool[ nodeID ];
+    for (auto it = n->edgeID.begin(); it != n->edgeID.end(); ++it) {
+        if (*it == e->id) {
+            n->edgeID.erase(it);
+            break;
+        }
+    }
 }
 void GRAPH_SYSTEM::deleteEdgesOfNode( int nodeID )
 {
-   // GRAPH_NODE *n  = &mNodeArr_Pool[ nodeID ];
-    //
-    // modify and add your code heres
-    //
-
+    GRAPH_NODE *n  = &mNodeArr_Pool[ nodeID ];
+    while (!n->edgeID.empty()) {
+        deleteEdge(n->edgeID.back());
+    }
 }
 
 void GRAPH_SYSTEM::deleteNode( int nodeID ) {
-    //if ( mCurNumOfActiveNodes <= 0 ) return;
-    //GRAPH_NODE *n = &mNodeArr_Pool[ nodeID ];
-    //
-    // modify and add your code heres
-    //
+    if ( mCurNumOfActiveNodes <= 0 ) return;
+    GRAPH_NODE *n = &mNodeArr_Pool[ nodeID ];
+    int dynamicID = n->dynamicID;
+    if (dynamicID < 0 || dynamicID >= mCurNumOfActiveNodes) return;
 
+    deleteEdgesOfNode( nodeID );
+
+    int lastNodeID = mActiveNodeArr[ mCurNumOfActiveNodes - 1 ];
+    mActiveNodeArr[ dynamicID ] = lastNodeID;
+    mNodeArr_Pool[ lastNodeID ].dynamicID = dynamicID;
+    --mCurNumOfActiveNodes;
+
+    mFreeNodeArr[ mCurNumOfFreeNodes ] = nodeID;
+    ++mCurNumOfFreeNodes;
+
+    if ( mSelectedNode == n ) mSelectedNode = nullptr;
+    if ( mPassiveSelectedNode == n ) mPassiveSelectedNode = nullptr;
+    if ( mStartNode == n ) mStartNode = nullptr;
+    if ( mDestinationNode == n ) mDestinationNode = nullptr;
 }
 
 void GRAPH_SYSTEM::deleteSelectedNode(  ) {
     if ( mSelectedNode == 0 ) return;
-    //
-    // modify and add your code heres
-    //
+    deleteNode( mSelectedNode->id );
+    mSelectedNode = nullptr;
 }
 
 bool GRAPH_SYSTEM::isSelectedNode( ) const
@@ -421,20 +570,12 @@ void GRAPH_SYSTEM::changeOperation()
 void GRAPH_SYSTEM::resetDepthOfAllNodes()
 {
     mMaxNodeDepth = 0;
-    //
-    // modify and add your code heres
-    // 
-
     int numNodes = getNumOfNodes();
     for (int i = 0; i < numNodes; ++i) {
-        //int nodeID = mActiveNodeArr[i];
-        //GRAPH_NODE* n = &mNodeArr_Pool[nodeID];
-        //
-        // modify and add your code heres
-        // 
-        // set node's depth
-        // and others if necessary
-        //
+        int nodeID = mActiveNodeArr[i];
+        GRAPH_NODE* n = &mNodeArr_Pool[nodeID];
+        n->depth = SYS_CONSTANTS::max_int;
+        n->visited = false;
     }
 }
 
@@ -462,118 +603,85 @@ void GRAPH_SYSTEM::computeDepthOfAllNodesFromSelectedNode(GRAPH_NODE* node, int 
     if (node == 0) return;
     node->depth = depth;
     node->visited = true;
-    //
-    // modify and add your code heres
-    //
-    // for all edges incident to the node: node
-        // get edge ID
-        // get e = &mEdgeArr_Pool[edgeID];
-        // n0 = &mNodeArr_Pool[e->nodeID[0]];
-        // n1 = &mNodeArr_Pool[e->nodeID[1]];
-        // determine the next node, which is set as the current node
-        // update the current node's depth
-        // recursively update all the nodes connected to the current node
-        //     
-    //for (int i = 0; i < node->edgeID.size(); ++i) {
-        //
-        // modify and add your code heres
-        // 
-        
-    //}
+    
+    for (int i = 0; i < node->edgeID.size(); ++i) {
+        int edgeID = node->edgeID[i];
+        GRAPH_EDGE* e = &mEdgeArr_Pool[edgeID];
+        int nextNodeID = (e->nodeID[0] == node->id) ? e->nodeID[1] : e->nodeID[0];
+        GRAPH_NODE* nextNode = &mNodeArr_Pool[nextNodeID];
+        if (depth + 1 < nextNode->depth) {
+            computeDepthOfAllNodesFromSelectedNode(nextNode, depth + 1);
+        }
+    }
 }
 
 void GRAPH_SYSTEM::computeDepthOfAllNodesFromSelectedNode()
 {
-    // reset the depth of all nodes
-    // if mSelectedNode is nullpute, return
-    // set  mMaxNodeDepth = 0;
-    // set mSelectedNode->depth as zero
-    // invoke computeDepthOfAllNodesFromSelectedNode
-    // finally, determine the mMaxNodeDepth
-    // 
-    
-    //
-    // modify and add your code heres
-    //
-
+    resetDepthOfAllNodes();
+    if (mSelectedNode == nullptr) return;
+    mMaxNodeDepth = 0;
+    mSelectedNode->depth = 0;
+    computeDepthOfAllNodesFromSelectedNode(mSelectedNode, 0);
 
     // Determine the mMaxNodeDepth
     int numNodes = getNumOfNodes();
     for (int i = 0; i < numNodes; ++i) {
-        //
-        // modify and add your code heres
-        //
+        int nodeID = mActiveNodeArr[i];
+        GRAPH_NODE* n = &mNodeArr_Pool[nodeID];
+        if (n->depth != SYS_CONSTANTS::max_int && n->depth > mMaxNodeDepth) {
+            mMaxNodeDepth = n->depth;
+        }
     }
 }
 
 // This member function is not used.
 float GRAPH_SYSTEM::getNodeDepthFromSelectedNode(int nodeIndex) const
 {
-    float d = 0.0;
-    //
-    // modify and add your code heres
-    //
-    return d;
+    if (nodeIndex >= 0 && nodeIndex < mCurNumOfActiveNodes) {
+        int nodeID = mActiveNodeArr[nodeIndex];
+        return mNodeArr_Pool[nodeID].depth;
+    }
+    return -1.0;
 }
 
 void GRAPH_SYSTEM::resetPathInformationOfAllNodes()
 {
-    //
-    // modify and add your code heres
-    // 
-
     int numNodes = getNumOfNodes();
     for (int i = 0; i < numNodes; ++i) {
         int nodeID = mActiveNodeArr[i];
         GRAPH_NODE* n = &mNodeArr_Pool[nodeID];
-        //
-        // modify and add your code heres
-        //
-        // set path cost of node
-        // set path_parent of node
+        n->path_cost = SYS_CONSTANTS::max_double;
+        n->path_parent = nullptr;
+        n->visited = false;
     }
 }
 
 void GRAPH_SYSTEM::computeShortestPath(GRAPH_NODE *node)
 {
-    if (node == 0) return;
-    //
-    // modify and add your code heres
-    //    
+    if (node == nullptr) return;
 
-
-    // for each edge incident to node, node 
-    // DO
     for (int i = 0; i < node->edgeID.size(); ++i) {
-        //
-        // modify and add your code heres
-        //
-        // get an edge
-        // determine the next node. Set it as the current node.
-        // compute distance d: node->p.distance(next->p);
-        // if new path cost is not better, check for the other edges
-        // if new path cost is better, update the node's path cost and path_parent
-        // Also, invokte computeShortestPath for the current node.
-        //int edgeID = node->edgeID[i];
-        //GRAPH_EDGE* e = &mEdgeArr_Pool[edgeID];
+        int edgeID = node->edgeID[i];
+        GRAPH_EDGE* e = &mEdgeArr_Pool[edgeID];
+        int nextNodeID = (e->nodeID[0] == node->id) ? e->nodeID[1] : e->nodeID[0];
+        GRAPH_NODE* nextNode = &mNodeArr_Pool[nextNodeID];
 
-        //GRAPH_NODE* n0 = &mNodeArr_Pool[e->nodeID[0]];
-        //GRAPH_NODE* n1 = &mNodeArr_Pool[e->nodeID[1]];
-        //
-        // modify and add your code heres
-        //
+        double d = node->p.distance(nextNode->p);
+        double new_cost = node->path_cost + d;
+        if (new_cost < nextNode->path_cost) {
+            nextNode->path_cost = new_cost;
+            nextNode->path_parent = node;
+            computeShortestPath(nextNode);
+        }
     }
 }
 
 void GRAPH_SYSTEM::computeShortestPath()
 {
-    //
-    // modify and add your code heres
-    //
-    // reset path information of all nodes
-    // if mStartNode == nullptr || mDestinationNode == nullptr, return
-    // invokte computeShortestPath with mStartNode
-    //
+    resetPathInformationOfAllNodes();
+    if (mStartNode == nullptr || mDestinationNode == nullptr) return;
+    mStartNode->path_cost = 0.0;
+    computeShortestPath(mStartNode);
 }
 
 void GRAPH_SYSTEM::handleKeyPressedEvent( unsigned char key )
@@ -702,21 +810,19 @@ void GRAPH_SYSTEM::stopAutoNodeDeletion()
 void GRAPH_SYSTEM::update( )
 {
     if (!mFlgAutoNodeDeletion) {
-     
         return;
     }
     if (mCurNumOfActiveNodes<=0) {
-     mFlgAutoNodeDeletion = false;
+        mFlgAutoNodeDeletion = false;
         return;
     }
     Sleep(250);
 
-    //
-    // modify and add your code
-    // 
-    // delete the selected node?
-    // delete all the edges incident to the selected node?
-    //
+    if (mSelectedNode != nullptr) {
+        deleteNode(mSelectedNode->id);
+    } else {
+        deleteNode(mActiveNodeArr[0]);
+    }
 
     mSelectedNode = 0;
     mPassiveSelectedNode = 0;

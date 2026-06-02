@@ -1,6 +1,6 @@
 //********************************************
-// Student Name			:
-// Student ID			:
+// Student Name			: ¨x–wº·
+// Student ID			: 114550048
 //
 // Instructor: Sai-Keung WONG
 // Email:	cswingo@cs.nctu.edu.tw

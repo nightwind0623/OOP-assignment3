@@ -1,7 +1,7 @@
 //********************************************
-// Student Name			:
-// Student ID			:
-// Student Email Address:
+// Student Name			: ¬xĞw¼á
+// Student ID			: 114550048
+// Student Email Address: kevin.hongdragon@gmail.com
 //********************************************
 //
 //
